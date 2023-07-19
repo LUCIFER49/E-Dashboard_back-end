@@ -38,6 +38,16 @@ app.post("/add-product", async (req, res) => {
   res.send(result);
 });
 
+//API for getting all the products list from database
+app.get('/products', async (req, res) => {
+  let products = await Product.find();
+  if(products.length > 0){
+    res.send(products)
+  }else {
+    res.send({ result:"No Product found" });
+  }
+});
+
 app.listen(5000);
 
 // app.get("/", (req, res) => {            //helps in creating API
