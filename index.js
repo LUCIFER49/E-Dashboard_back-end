@@ -3,10 +3,14 @@ const cors = require("cors");
 require("./DB/config");
 const User = require("./DB/User");
 const Product = require("./DB/Product");
+const JWT = require('jsonwebtoken');
+
 const app = express();
+const jwtKey = 'e-comm';
 
 app.use(express.json());
 app.use(cors());
+
 
 //API for user singup (or ROUTES FOR SIGNUP)
 app.post("/register", async (req, res) => {
@@ -14,7 +18,12 @@ app.post("/register", async (req, res) => {
   let result = await user.save();
   result = result.toObject(); //For removing password from API
   delete result.password;
-  res.send(result);
+  JWT.sign({ result }, jwtKey, { expiresIn: "2h" }, (error, token) => {
+    if(error){
+      res.send({ result:"Something Went Wrong, Please try after sometime" })
+    }
+    res.send({ result, auth: token })
+  })
 });
 
 //API for user login (or Routes for LOGIN)
@@ -22,7 +31,12 @@ app.post("/login", async (req, res) => {
   if (req.body.password && req.body.email) {
     let user = await User.findOne(req.body).select("-password"); //For removing password from API
     if (user) {
-      res.send(user);
+      JWT.sign( {user}, jwtKey, {expiresIn: "2h"}, (error, token) => {   //1st arg: data u want send  2nd arg: callback function     optional parameter: expiry time
+        if(error){
+          res.send({ result: "Something Went Wrong, Please try after sometime" })
+        }
+        res.send({ user, auth: token })
+      })   
     } else {
       res.send({ result: "NO USER FOUND" });
     }
