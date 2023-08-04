@@ -15,14 +15,14 @@ app.use(cors());
 //API for user singup (or ROUTES FOR SIGNUP)
 app.post("/register", async (req, res) => {
   let user = new User(req.body);
-  let result = await user.save();
-  result = result.toObject(); //For removing password from API
-  delete result.password;
-  JWT.sign({ result }, jwtKey, { expiresIn: "2h" }, (error, token) => {
+  let userDetails = await user.save();
+  userDetails = userDetails.toObject(); //For removing password from API
+  delete userDetails.password;
+  JWT.sign({ userDetails }, jwtKey, { expiresIn: "2h" }, (error, token) => {
     if(error){
-      res.send({ result:"Something Went Wrong, Please try after sometime" })
+      res.send({ userDetails:"Something Went Wrong, Please try after sometime" })
     }
-    res.send({ result, auth: token })
+    res.send({ userDetails, auth: token })
   })
 });
 
@@ -100,6 +100,11 @@ app.get("/search/:key", async (req, res) => {
   });
   res.send(result);
 });
+
+//Function for verifying  TOKEN for respective user => Also known as middleware 
+function verifyToken(req, res, next){
+  
+}
 
 app.listen(5000);
 
