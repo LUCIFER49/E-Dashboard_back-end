@@ -3,14 +3,13 @@ const cors = require("cors");
 require("./DB/config");
 const User = require("./DB/User");
 const Product = require("./DB/Product");
-const JWT = require('jsonwebtoken');
+const JWT = require("jsonwebtoken");
 
 const app = express();
-const jwtKey = 'e-comm';
+const jwtKey = "e-comm";
 
 app.use(express.json());
 app.use(cors());
-
 
 //API for user singup (or ROUTES FOR SIGNUP)
 app.post("/register", async (req, res) => {
@@ -19,11 +18,13 @@ app.post("/register", async (req, res) => {
   userDetails = userDetails.toObject(); //For removing password from API
   delete userDetails.password;
   JWT.sign({ userDetails }, jwtKey, { expiresIn: "2h" }, (error, token) => {
-    if(error){
-      res.send({ userDetails:"Something Went Wrong, Please try after sometime" })
+    if (error) {
+      res.send({
+        userDetails: "Something Went Wrong, Please try after sometime",
+      });
     }
-    res.send({ userDetails, auth: token })
-  })
+    res.send({ userDetails, auth: token });
+  });
 });
 
 //API for user login (or Routes for LOGIN)
@@ -31,12 +32,15 @@ app.post("/login", async (req, res) => {
   if (req.body.password && req.body.email) {
     let user = await User.findOne(req.body).select("-password"); //For removing password from API
     if (user) {
-      JWT.sign( {user}, jwtKey, {expiresIn: "2h"}, (error, token) => {   //1st arg: data u want send  2nd arg: callback function     optional parameter: expiry time
-        if(error){
-          res.send({ result: "Something Went Wrong, Please try after sometime" })
+      JWT.sign({ user }, jwtKey, { expiresIn: "2h" }, (error, token) => {
+        //1st arg: data u want send  2nd arg: callback function     optional parameter: expiry time
+        if (error) {
+          res.send({
+            result: "Something Went Wrong, Please try after sometime",
+          });
         }
-        res.send({ user, auth: token })
-      })   
+        res.send({ user, auth: token });
+      });
     } else {
       res.send({ result: "NO USER FOUND" });
     }
@@ -46,14 +50,14 @@ app.post("/login", async (req, res) => {
 });
 
 //API for adding products in database (or Routes for ADDING PRODUCTS)
-app.post("/add-product", async (req, res) => {
+app.post("/add-product", verifyToken, async (req, res) => {
   let product = new Product(req.body);
   let result = await product.save(); //save() for saving data in DB
   res.send(result);
 });
 
 //API for getting all the products list from database
-app.get("/products", async (req, res) => {
+app.get("/products", verifyToken, async (req, res) => {
   let products = await Product.find(); //find() for fetching all the product from DB
   if (products.length > 0) {
     res.send(products);
@@ -63,13 +67,13 @@ app.get("/products", async (req, res) => {
 });
 
 //API for deleting data
-app.delete("/product/:id", async (req, res) => {
+app.delete("/product/:id", verifyToken, async (req, res) => {
   const result = await Product.deleteOne({ _id: req.params.id }); //deleteOne() is used for deleting a single product from DB
   res.send(result);
 });
 
 //API for fetching respective product data from DB
-app.get("/product/:id", async (req, res) => {
+app.get("/product/:id", verifyToken, async (req, res) => {
   let result = await Product.findOne({ _id: req.params.id }); //findOne() is for fetching single product from DB
   if (result) {
     res.send(result);
@@ -79,7 +83,7 @@ app.get("/product/:id", async (req, res) => {
 });
 
 //API for updating data in DB
-app.put("/product/:id", async (req, res) => {
+app.put("/product/:id", verifyToken, async (req, res) => {
   let result = await Product.updateOne(
     //updateOne() is for updating a single product;
     { _id: req.params.id },
@@ -89,21 +93,35 @@ app.put("/product/:id", async (req, res) => {
 });
 
 //API for performing search action
-app.get("/search/:key", async (req, res) => {
+app.get("/search/:key", verifyToken, async (req, res) => {
   let result = await Product.find({
-    "$or": [      //in an object whenever we perform search over multiple field we use "$or" symbol
+    $or: [
+      //in an object whenever we perform search over multiple field we use "$or" symbol
       { name: { $regex: req.params.key } },
       { company: { $regex: req.params.key } },
       { price: { $regex: req.params.key } },
-      { category: { $regex: req.params.key } }, 
-    ]                                   
+      { category: { $regex: req.params.key } },
+    ],
   });
   res.send(result);
 });
 
-//Function for verifying  TOKEN for respective user => Also known as middleware 
-function verifyToken(req, res, next){
-  
+//Function for verifying  TOKEN for respective user => Also known as middleware
+function verifyToken(req, res, next) {
+  let token = req.headers["authorization"];
+  if (token) {
+    token = token.split(' ')[1];
+    console.warn(token);
+    JWT.verify(token, jwtKey, (err, valid) => {
+      if (err) {
+        res.status(401).send({ result: "PLEASE PROVIDE VALID TOKEN" });
+      } else {
+        next();
+      }
+    });
+  } else {
+    res.status(403).send({ result: "PLEASE ADD TOKEN WITH HEADER" });
+  }
 }
 
 app.listen(5000);
